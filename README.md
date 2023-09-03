@@ -1,89 +1,144 @@
 # Adv_LinAlg_Lib
-This library is the core "primative types" used internally within optimizer macros within the `adv_linalg` crate, a automatic optimizing linear algebra library.
 
-Obviously, this library is not intended for the end-user due mostly to the harder developer experience. Nonetheless, the library can be used independently from `adv_linalg` for building **custom runtime-optimizations**.
+⚠️ This library is currently under construction! Design is subject to change! ⚠️
 
-Information about how `adv_linalg` optimizes, and the overall type-structure are work-in-progresses, but will be available before version 0.2.0 of this crate.
+The backbone of the linear algebra framework `adv_linalg`.
+
+## Usage
+#### Cargo.toml
+```
+adv_linalg_lib = "0.1"
+```
+
+# #![no_std] Compliance Feature
+If you need a version of this library that uses only the `core` crate, simply import this library as such:
+
+#### Cargo.toml
+
+```toml
+adv_linalg_lib = { version = "0.1", features=["no_std"] }
+```
+
+Do note that this drastically simplifies the library structure and that the dependencies of this crate do not neccessarily use `#![no_std]`.
+
+# Basic Types
+
+Simply, this is a linear algebra library. It features two main types:
+- Vector\<T>
+- Matrix\<T>
+
+These are simple wrappers around the standard library's `Vec<T>` type.
+
+Most developers will often only need these two types.
+
+However, for users requiring an optimized run-time performance, this library features two options:
+- use the framework `adv_linalg` alongside this library for automatic compile-time optimizations **(recommended)**
+- manually use **advanced types**
+
+*In fact,* `adv_linalg` *simply uses `adv_linalg_lib` as as a "ghost" type-system*.
+
+To learn more, read about [advanced types](#advanced-types)
+
+# Advanced Types
+
+For developers just wanting a simple tool, just know that this section is optional. 
+
+Every type in this crate is either a "Vector" or a "Matrix". All types include this base in their name.
+
+The type's functionality is described by it's both optional:
+- [prefix](#prefix) (description of mutability)
+- and/or [suffix](#suffix) (special functionality).
+
+## Prefix
+
+There is only one prefix: Mut.
+
+### Mut
+This states explicitly to allow interior mutability.
+
+<details>
+    <summary>Click here to learn about "interior mutability"</summary>
+
+To learn about interior mutability, first understand "**interior immutability**".
+
+Interior immutability means that the interior of the type is unchanging. This forces the following rule: if the data mutated, then it is a different vector.
+
+In other words, to change the data, an allocation is needed.
+
+Below is example code for interior mutability from regular mutability:
+```rust
+fn main() {
+    // MUTABILITY TYPES
+
+    // initial value
+    let mut std_vec = vec![1, 2, 3];
+    
+    // Example of mutability that follows `interior 
+    // immutability`.
+    // We essentially "overwrite" the variable.
+    std_vec = std_vec.iter().map(|val| val + 1).collect();
+
+    // Example of only 'interior mutability'.
+    // Imagine the next three lines as a single operation.
+    // We are reusing the already allocated memory.
+    {
+        std_vec[0] = std_vec[0] + 1;
+        std_vec[1] = std_vec[1] + 1;
+        std_vec[2] = std_vec[2] + 1;
+    }
+
+    // Exterior mutability "overwrote the varaiable", utilizing an entire new heap allocation in the process.
+    // Interior mutability "overwrote the memory", reusuing the already allocated memory.
+}
+
+```
+
+By being selective when to use interior mutability or not can be useful to reducing time spent allocating memory.
+
+</details>
+
+## Suffix
+
+There are currently three suffixes:
+1. Slice
+3. Simd (planned/nightly)
+2. Gpu (planned)
+
+### Slice
+A subsection view of an existing vector. This is simply a slice of a Vec under-the-hood.
+
+#### Example
+```rust
+use adv_linalg_lib::vector;
+use adv_linalg_lib::vectors::{Vector, VectorSlice};
+
+fn main() {
+    let vector: Vector<u32> = vector![1, 2, 3];
+
+    let vector_slice: VectorSlice<'_, u32> = vector.as_slice(1..vector.len());
+
+    assert_eq!(
+        vector_slice.to_vector(), vector![2, 3]
+    )
+}
+```
+
+### Simd
+⚠️Design is still under-construction and is nightly.⚠️
+
+This feature is still in the design process. The produced design will use `core::simd::Simd`. Therefore, when the design is implemented, this require to build with `nightly` until Rust stabilizes `core::simd::Simd`.
+
+### Gpu
+⚠️Design is still under-construction.⚠️
+
+This feature is still in the design process. The produced design will support OpenCL.
+
+## Some Advanced Type Examples:
+- MutVector
+- MatrixSlice
+- MutVectorSimd
 
 # License
 This software is licensed ultimately described under the terms of the SPDX 2.1 License Expression "MIT OR Apache-2.0".
 
 see files *`'LICENSE.md'`*, *`'LICENSE-MIT'`*, and *`'LICENSE-APACHE'`* in the root of this crate for more details
-
-# Usage
-You can easily import `adv_linalg_lib` in your `Cargo.toml` file as
-```toml
-adv_linalg_lib = "0.1"
-```
-
-# Overall Type System
-This library is split up into a "Vector" group and a "Matrix" group.
-
-Consider the current "Vector" group for instance:
-
-group | type | feature_enabled
----|---|---
-Vector | Vector\<T> | "full"
-Vector | MutVector\<T> | "full"
-Vector | VectorSlice\<'v, T> | "full" or "no_std"
-Vector | MutVectorSlice\<'v, T> | "full" or "no_std"
-
-Even though there are 4 unique types, we may want cross-type functionality, like Addition that all go to a similar type (ex. `Vector<T> + MutVectorSlice<'v, T> -> Vector<T>`).
-
-In fact, this is exactly how the crate `simp_linalg` works, but lacking mutability. `simp_linalg` lacks is a clean way to implement mutability, simd utilization, gpu accelleration, etc. The ambition of `adv_linalg` is to be a massive superset of `simp_linalg`, but keeping the simplicity in its usage in syntax.
-
-## Why is it structured this way?
-
-To understand why, first understand some design decisions were made early on:
-1. `adv_linalg` will depend only on itself and `adv_linalg_lib`
-2. `adv_linalg` will never require importing traits for functionality
-
-*Other design decisions were made, but they pertain to `#![no_std]` functionality.*
-
-\#1 forces a single source of truth to be only this library, making this the "core" of `adv_linalg`. This incentivises dense and low-level functionality. This usually accomplished by to defining some trait and importing them when you want to use some functionality.
-
-However, #2 disallows this. This seems counter-intuitive, but is a driving force to not let the inner type system get out-of-control, and won't affect the end-user experience, only the developer side. #2 is subject to change before version 1.0. This involves a lot of manual implementations. However, this crate leverages procedural macros to massively reduce complexity when adding new types.
-
-# #![no_std] Compliance
-#### Heads up!
-If are simply using the Rust standard library `std`, then you can safely ignore this section.
-You can easily import `adv_linalg_lib` in your `Cargo.toml` file as
-```toml
-adv_linalg_lib = "0.1"
-```
-
-If you know you need a headless environment (using only the `core` crate, no `alloc`), then import `adv_linalg_lib` in your Cargo.toml file as
-```toml
-adv_linalg_lib = { version = "0.1", features=["no_std"] }
-```
-Continue reading for more details on what effects this has...
-
-## Feature List
-
-This library is fully implemented using the `#![no_std]`, with the **optional** exception of the `alloc` crate.
-
-The two features of this crate are:
-1. `no_std`
-2. `full` *<-- default*
-
-### 1. `no_std`
-When `no_std` is enabled, this implements `adv_linalg_lib` using only the Rust `core` crate. Importantly, this does utilize the Rust `alloc` crate, which is useful for heap-less programs. In fact, the `core` crate will always be guaranteed to be used exclusively within the source code of this crate.
-
-HOWEVER: Dependencies of this library do not hold this guarantee. The consequence of this is that developers of headless programs must compile on a non-headless machine and then import the source code as needed.
-
-### 2. `full`
-When `full` is enabled, this implements `adv_linalg_lin` using the Rust `core` and `alloc` crates. Specifically, the only object ever imported from `alloc` is `alloc::vec::Vec`. This one change results in a massive expansion of the type system.
-
-By default, `full` is enabled with the intention of broader compatibility and optimizations for end-users using the Rust `std` crate, which are likely to be the majority of users.
-
-With the intention of procedural optimizations in the `adv_linalg` crate, any unnecessary overheads introduced by `alloc::vec::Vec` can be optimized away. This is why direct usage of `adv_linalg_lib` is generally discouraged.
-
-However, a good example of when to use this library is for testing new optimization patterns or implementing protocols with how memory shall be handled such as for gpu buffers.
-
-### Consequences of using feature `no_std`
-By switching to using `no-std`, `adv_linalg_lib` retains nearly all functionality but reduces the overall type system. Specifically, the only functionality removed is dynamic sizing of `adv_linalg` types at runtime. If disallowing dynamic sizing is a requirement, then you are encouraged to use the `no_std` feature. To do so, import this line under your `[dependencies]` in your `Cargo.toml` file:
-```toml
-[dependencies]
-...
-adv_linalg_lib = { version="*", features=["no_std"] }
-```
