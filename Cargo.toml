@@ -24,6 +24,7 @@ include = [
 [features]
 default = ["full"]
 no_std = []
+cheap_casts = []
 full = ["no_std"]
 
 [dependencies]
