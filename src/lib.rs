@@ -98,5 +98,7 @@ cfg_if! (
 pub mod vectors;
 /// module for all matrix types
 pub mod matricies;
+/// easy initialization of vectors and matricies
+pub mod macros;
 /// default types
 pub mod prelude;
