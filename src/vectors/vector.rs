@@ -199,7 +199,7 @@ cfg_if! {
 }
 
 // dependent implementations
-impl<'v, T> Index<usize> for Vector<T>
+impl<T> Index<usize> for Vector<T>
 where
     T: Clone,
 {
