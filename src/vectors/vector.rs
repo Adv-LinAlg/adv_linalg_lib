@@ -6,10 +6,31 @@ use alloc::vec::Vec;
 use cfg_if::cfg_if;
 
 impl<T> Vector<T> {
+    /// Returns the length of the `Vector<T>`.
     pub fn len(&self) -> usize {
         self.values.len()
     }
 
+    /// Cheaply creates a sliced view of a `Vector<T>` instance.
+    /// 
+    /// ## Example
+    /// ```
+    /// use adv_linalg_lib::vector;
+    /// use adv_linalg_lib::vectors::Vector;
+    /// 
+    /// // Initialization of an existing vector
+    /// let vector = vector![1, 2, 3, 4];
+    /// let len = vector.len();
+    /// 
+    /// // create specific views of the vector
+    /// let full_view = vector.as_slice(0..len);
+    /// let lhs_view = vector.as_slice(0..len/2);
+    /// let rhs_view = vector.as_slice(len/2..len);
+    /// 
+    /// assert_eq!(vector![1, 2, 3, 4], full_view.into());
+    /// assert_eq!(vector![1, 2], lhs_view.into());
+    /// assert_eq!(vector![3, 4], rhs_view.into())
+    /// ```
     pub fn as_slice<'v>(&'v self, range: Range<usize>) -> VectorSlice<'v, T> {
         VectorSlice {
             values: self
@@ -23,13 +44,25 @@ impl<T> Vector<T> {
     }
 }
 
-/// Map Implementations
+/// # Map Implementations
 ///
 /// Applies a function element-wise to every value in the
 /// vector to produce a new vector.
 ///
 /// Internally, this is simply using the `map()` method from
 /// the `Iterator` trait.
+///
+/// ## `.map()` Example
+/// 
+/// ```rust
+/// use adv_linalg_lib::vector;
+/// use adv_linalg_lib::vectors::Vector;
+///
+/// let vector1 = vector![1, 2, 3];
+/// let vector2 = vector1.map(|val| val - 1);
+/// 
+/// assert_eq!(vector2, vector![0, 1, 2])
+/// ```
 ///
 /// ## Panic!
 ///
@@ -69,18 +102,24 @@ impl<I> Vector<I> {
     }
 }
 
-/// Combine Implementations
+/// # Combine Implementations
 ///
 /// Applies a function pair-wise between two vectors that produces a new vector.
 ///
-/// ## Example
+/// ## `.combine()` Example
 /// ```rust
 /// use adv_linalg_lib::vector;
 /// use adv_linalg_lib::vectors::Vector;
 ///
 /// let vector1 = vector![1, 2, 3];
-/// let vector2 = vector![]
+/// let vector2 = vector![30, 15, 10];
+/// 
+/// let combined = vector1.combine(&vector2, |lhs, rhs| lhs * rhs);
+/// assert_eq!(combined, vector![30, 30, 30])
 /// ```
+/// ## Panic!
+/// 
+/// This function will panic if the vectors are two different sizes.
 impl<L> Vector<L> {
     pub fn combine<F, R, O>(&self, other: &Vector<R>, f: F) -> Vector<O>
     where
