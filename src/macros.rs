@@ -7,7 +7,7 @@ cfg_if! {
         macro_rules! vector {
             //no arguments case
             () => {
-                $crate::vector_impl::Vector::from(vec![])
+                $crate::vectors::Vector::from(vec![])
             };
 
             //repeat some elements some n times
