@@ -10,7 +10,7 @@ impl<T> Vector<T> {
         self.values.len()
     }
 
-    pub fn to_slice<'v>(&'v self, range: Range<usize>) -> VectorSlice<'v, T> {
+    pub fn as_slice<'v>(&'v self, range: Range<usize>) -> VectorSlice<'v, T> {
         VectorSlice {
             values: self
                 .values
