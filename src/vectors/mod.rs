@@ -60,6 +60,20 @@ use cfg_if::cfg_if;
 mod vector_slice;
 mod mut_vector_slice;
 
+mod private {
+    pub trait VectorType<'v>
+    where
+        Self: 'v,
+        Self::Iter: Iterator
+    {
+        type Iter;
+
+        fn iter(&'v self) -> Self::Iter;
+
+        fn len(&'v self) -> usize;
+    }
+}
+
 cfg_if! {
     if #[cfg(feature = "full")] {
         use alloc::vec::Vec;
@@ -87,6 +101,17 @@ cfg_if! {
         #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
         pub struct Vector<T> {
             values: Vec<T>,
+        }
+        impl<'v, T: 'v> private::VectorType<'v> for Vector<T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
         }
 
         /// This vector type allows interior mutability.
@@ -158,6 +183,17 @@ cfg_if! {
         pub struct MutVector<T> {
             values: Vec<T>,
         }
+        impl<'v, T: 'v> private::VectorType<'v> for MutVector<T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
+        }
     }
 }
 
@@ -183,6 +219,17 @@ cfg_if! {
         pub struct VectorSlice<'v, T> {
             values: &'v [T]
         }
+        impl<'v, T> private::VectorType<'v> for VectorSlice<'v, T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
+        }
 
         /// A mutable slice-range of a [`MutVector<T>`](crate::vectors::Vector).
         /// 
@@ -204,6 +251,17 @@ cfg_if! {
         pub struct MutVectorSlice<'v, T> {
             values: &'v mut [T]
         }
+        impl<'v, T> private::VectorType<'v> for MutVectorSlice<'v, T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
+        }
     } else if #[cfg(feature = "no_std")] {
         /// The basic vector type in `#![no_std]` mode.
         /// 
@@ -221,6 +279,17 @@ cfg_if! {
         pub struct VectorSlice<'v, T> {
             values: &'v [T]
         }
+        impl<'v, T> private::VectorType<'v> for VectorSlice<'v, T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
+        }
 
         /// Implements interior mutability, unlike
         /// [`VectorSlice<'v, T>`](crate::vectors::VectorSlice).
@@ -237,6 +306,17 @@ cfg_if! {
         #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
         pub struct MutVectorSlice<'v, T> {
             values: &'v mut [T]
+        }
+        impl<'v, T> private::VectorType<'v> for MutVectorSlice<'v, T> {
+            type Iter = core::slice::Iter<'v, T>;
+
+            fn iter(&'v self) -> Self::Iter {
+                self.values.iter()
+            }
+    
+            fn len(&'v self) -> usize {
+                self.values.len()
+            }
         }
     }
 }
