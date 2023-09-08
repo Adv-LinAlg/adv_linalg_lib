@@ -1,6 +1,6 @@
 [package]
 name = "adv_linalg_lib"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Eric Ovenden <eric2ovenden@gmail.com>"]
 
@@ -24,6 +24,7 @@ include = [
 [features]
 default = ["full"]
 no_std = []
+cheap_casts = []
 full = ["no_std"]
 
 [dependencies]
