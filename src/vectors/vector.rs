@@ -1,6 +1,9 @@
 #![cfg(feature = "full")]
 
-use crate::vectors::{MutVector, MutVectorSlice, Vector, VectorSlice};
+use crate::vectors::{
+    MutVector, MutVectorSlice, Vector, VectorSlice,
+    private::VectorType
+};
 use core::ops::{Index, Range};
 use alloc::vec::Vec;
 use cfg_if::cfg_if;
@@ -120,15 +123,15 @@ impl<I> Vector<I> {
 /// ## Panic!
 /// 
 /// This function will panic if the vectors are two different sizes.
-impl<L> Vector<L> {
-    pub fn combine<F, R, O>(&self, other: &Vector<R>, f: F) -> Vector<O>
+impl<'v, L> Vector<L> {
+    pub fn combine<F, R, O>(&self, other: &'v dyn VectorType<'v, Iter = core::slice::Iter<'v, R>>, f: F) -> Vector<O>
     where
         F: Fn(&L, &R) -> O,
     {
         if self.len() != other.len() {
             panic!("Cannot map vectors of different sizes")
         }
-        let mut iter = self.values.iter().zip(other.values.iter());
+        let mut iter = self.iter().zip(other.iter());
 
         let mut params = Vec::with_capacity(self.len());
         while let Some((lhs_value, rhs_value)) = iter.next() {
@@ -137,7 +140,7 @@ impl<L> Vector<L> {
         Vector::from(params)
     }
 
-    pub fn combine_enumerate<F, R, O>(&self, other: &Vector<R>, f: F) -> Vector<O>
+    pub fn combine_enumerate<F, R, O>(&self, other: &'v dyn VectorType<'v, Iter = core::slice::Iter<'v, R>>, f: F) -> Vector<O>
     where
         F: Fn(&L, &R, usize) -> O,
     {
@@ -145,7 +148,7 @@ impl<L> Vector<L> {
             panic!("Cannot map vectors of different sizes")
         }
 
-        let mut iter = self.values.iter().zip(other.values.iter()).enumerate();
+        let mut iter = self.iter().zip(other.iter()).enumerate();
 
         let mut params = Vec::with_capacity(self.len());
         while let Some((index, (lhs_value, rhs_value))) = iter.next() {
