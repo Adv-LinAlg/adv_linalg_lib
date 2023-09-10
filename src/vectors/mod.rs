@@ -72,6 +72,16 @@ mod private {
 
         fn len(&'v self) -> usize;
     }
+
+    pub trait MutVectorType<'v, T>: VectorType<'v, T>
+    where
+        Self: 'v,
+        Self::IterMut: Iterator<Item = &'v mut T>
+    {
+        type IterMut;
+
+        fn iter_mut(&'v mut self) -> Self::IterMut;
+    }
 }
 
 cfg_if! {
