@@ -82,6 +82,50 @@ mod private {
 
         fn iter_mut(&'v mut self) -> Self::IterMut;
     }
+
+    pub trait Map<'v, I>: VectorType<'v, I>
+    {
+        fn map<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        where
+            F: Fn(&'v I) -> O
+        {
+            use alloc::vec::Vec;
+
+            crate::vectors::Vector::from(
+                self.iter()
+                    .map(|value| f(value))
+                    .collect::<Vec<O>>()
+            )
+        }
+
+        fn map_index<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        where
+            F: Fn(usize) -> O
+        {
+            use alloc::vec::Vec;
+
+            crate::vectors::Vector::from(
+                self.iter()
+                    .enumerate()
+                    .map(|(index, _)| f(index))
+                    .collect::<Vec<O>>()
+            )
+        }
+
+        fn map_enumerate<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        where
+            F: Fn(usize, &'v I) -> O
+        {
+            use alloc::vec::Vec;
+
+            crate::vectors::Vector::from(
+                self.iter()
+                    .enumerate()
+                    .map(|(index, value)| f(index, value))
+                    .collect::<Vec<O>>()
+            )
+        }
+    }
 }
 
 cfg_if! {
