@@ -61,10 +61,10 @@ mod vector_slice;
 mod mut_vector_slice;
 
 mod private {
-    pub trait VectorType<'v>
+    pub trait VectorType<'v, T>
     where
         Self: 'v,
-        Self::Iter: Iterator
+        Self::Iter: Iterator<Item = &'v T>
     {
         type Iter;
 
