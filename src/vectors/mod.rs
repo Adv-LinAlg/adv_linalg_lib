@@ -126,6 +126,40 @@ mod private {
             )
         }
     }
+
+    pub trait MapMut<'v, T>: MutVectorType<'v, T>
+    {
+        fn map_mut<F>(&'v mut self, f: F) -> &'v mut Self
+        where
+            F: FnMut(&'v mut T)
+        {
+            for item in self.iter_mut() {
+
+            }
+            self
+        }
+
+        fn map_index_mut<F>(&'v mut self, f: F) -> &'v mut Self
+        where
+            F: FnMut(usize)
+        {
+            self.iter_mut()
+                .enumerate()
+                .map(|(index, ..)| index)
+                .for_each(f);
+            self
+        }
+
+        fn map_enumerate_mut<F>(&'v mut self, f: F) -> &'v mut Self
+        where
+            F: FnMut(usize, &'v mut T)
+        {
+            self.iter_mut()
+                .enumerate()
+                .for_each(|(index, value)| f(index, value));
+            self
+        }
+    }
 }
 
 cfg_if! {
