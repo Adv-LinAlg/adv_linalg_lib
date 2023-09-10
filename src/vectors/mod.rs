@@ -160,6 +160,46 @@ mod private {
             self
         }
     }
+
+    pub trait Combine<'v, L>: VectorType<'v, L>
+    {
+        fn combine<F, R, O>(&'v self, other: crate::vectors::Vector<R>, f: F) -> crate::vectors::Vector<O>
+        where
+            F: Fn(&L, &R) -> O
+        {
+            use alloc::vec::Vec;
+
+            if self.len() != other.len() {
+                panic!("Cannot map vectors of different sizes")
+            }
+            let mut iter = self.iter().zip(other.iter());
+    
+            let mut params = Vec::with_capacity(self.len());
+            while let Some((lhs_value, rhs_value)) = iter.next() {
+                params.push(f(lhs_value, rhs_value))
+            }
+            crate::vectors::Vector::from(params)
+        }
+
+        fn combine_enumerate<F, R, O>(&'v self, other: crate::vectors::Vector<R>, f: F) -> crate::vectors::Vector<O>
+        where
+            F: Fn(usize, &L, &R) -> O
+        {
+            use alloc::vec::Vec;
+
+            if self.len() != other.len() {
+                panic!("Cannot map vectors of different sizes")
+            }
+    
+            let mut iter = self.iter().zip(other.iter()).enumerate();
+    
+            let mut params = Vec::with_capacity(self.len());
+            while let Some((index, (lhs_value, rhs_value))) = iter.next() {
+                params.push(f(index, lhs_value, rhs_value));
+            }
+            crate::vectors::Vector::from(params)
+        }
+    }
 }
 
 cfg_if! {
