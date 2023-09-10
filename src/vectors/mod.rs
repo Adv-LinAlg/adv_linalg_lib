@@ -133,9 +133,8 @@ mod private {
         where
             F: FnMut(&'v mut T)
         {
-            for item in self.iter_mut() {
-
-            }
+            self.iter_mut()
+                .for_each(f);
             self
         }
 
