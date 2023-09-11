@@ -162,9 +162,10 @@ mod private {
 
     pub trait Combine<'v, L>: VectorType<'v, L>
     {
-        fn combine<F, R, O>(&'v self, other: crate::vectors::Vector<R>, f: F) -> crate::vectors::Vector<O>
+        fn combine<F, R, O, I>(&'v self, other: &dyn VectorType<'v, R, Iter = I>, f: F) -> crate::vectors::Vector<O>
         where
-            F: Fn(&L, &R) -> O
+            F: Fn(&L, &R) -> O,
+            I: Iterator<Item = R>
         {
             use alloc::vec::Vec;
 
@@ -180,9 +181,10 @@ mod private {
             crate::vectors::Vector::from(params)
         }
 
-        fn combine_enumerate<F, R, O>(&'v self, other: crate::vectors::Vector<R>, f: F) -> crate::vectors::Vector<O>
+        fn combine_enumerate<F, R, O, I>(&'v self, other: &dyn VectorType<'v, R, Iter = I>, f: F) -> crate::vectors::Vector<O>
         where
-            F: Fn(usize, &L, &R) -> O
+            F: Fn(usize, &L, &R) -> O,
+            I: Iterator<Item = R>
         {
             use alloc::vec::Vec;
 
