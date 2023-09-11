@@ -231,7 +231,7 @@ cfg_if! {
         pub struct Vector<T> {
             values: Vec<T>,
         }
-        impl<'v, T: 'v> private::VectorType<'v> for Vector<T> {
+        impl<'v, T: 'v> private::VectorType<'v, T> for Vector<T> {
             type Iter = core::slice::Iter<'v, T>;
 
             fn iter(&'v self) -> Self::Iter {
@@ -312,7 +312,7 @@ cfg_if! {
         pub struct MutVector<T> {
             values: Vec<T>,
         }
-        impl<'v, T: 'v> private::VectorType<'v> for MutVector<T> {
+        impl<'v, T: 'v> private::VectorType<'v, T> for MutVector<T> {
             type Iter = core::slice::Iter<'v, T>;
 
             fn iter(&'v self) -> Self::Iter {
@@ -348,7 +348,7 @@ cfg_if! {
         pub struct VectorSlice<'v, T> {
             values: &'v [T]
         }
-        impl<'v, T> private::VectorType<'v> for VectorSlice<'v, T> {
+        impl<'v, T> private::VectorType<'v, T> for VectorSlice<'v, T> {
             type Iter = core::slice::Iter<'v, T>;
 
             fn iter(&'v self) -> Self::Iter {
@@ -380,7 +380,7 @@ cfg_if! {
         pub struct MutVectorSlice<'v, T> {
             values: &'v mut [T]
         }
-        impl<'v, T> private::VectorType<'v> for MutVectorSlice<'v, T> {
+        impl<'v, T> private::VectorType<'v, T> for MutVectorSlice<'v, T> {
             type Iter = core::slice::Iter<'v, T>;
 
             fn iter(&'v self) -> Self::Iter {
