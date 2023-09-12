@@ -63,19 +63,19 @@ mod mut_vector_slice;
 mod private {
     pub trait VectorType<'v, T>
     where
-        Self: 'v,
+        T: 'v,
         Self::Iter: Iterator<Item = &'v T>
     {
         type Iter;
 
         fn iter(&'v self) -> Self::Iter;
 
-        fn len(&'v self) -> usize;
+        fn len(&self) -> usize;
     }
 
     pub trait MutVectorType<'v, T>: VectorType<'v, T>
     where
-        Self: 'v,
+        T: 'v,
         Self::IterMut: Iterator<Item = &'v mut T>
     {
         type IterMut;
@@ -83,24 +83,26 @@ mod private {
         fn iter_mut(&'v mut self) -> Self::IterMut;
     }
 
-    pub trait Map<'v, I>: VectorType<'v, I>
+    pub trait Map<'v, Input>: VectorType<'v, Input>
+    where
+        Input: 'v
     {
-        fn map<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        fn map<F, Output>(&'v self, f: F) -> crate::vectors::Vector<Output>
         where
-            F: Fn(&'v I) -> O
+            F: Fn(&Input) -> Output
         {
             use alloc::vec::Vec;
 
             crate::vectors::Vector::from(
                 self.iter()
                     .map(|value| f(value))
-                    .collect::<Vec<O>>()
+                    .collect::<Vec<Output>>()
             )
         }
 
-        fn map_index<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        fn map_index<F, Output>(&'v self, f: F) -> crate::vectors::Vector<Output>
         where
-            F: Fn(usize) -> O
+            F: Fn(usize) -> Output
         {
             use alloc::vec::Vec;
 
@@ -108,13 +110,13 @@ mod private {
                 self.iter()
                     .enumerate()
                     .map(|(index, _)| f(index))
-                    .collect::<Vec<O>>()
+                    .collect::<Vec<Output>>()
             )
         }
 
-        fn map_enumerate<F, O>(&'v self, f: F) -> crate::vectors::Vector<O>
+        fn map_enumerate<F, Output>(&'v self, f: F) -> crate::vectors::Vector<Output>
         where
-            F: Fn(usize, &'v I) -> O
+            F: Fn(usize, &Input) -> Output
         {
             use alloc::vec::Vec;
 
@@ -122,50 +124,38 @@ mod private {
                 self.iter()
                     .enumerate()
                     .map(|(index, value)| f(index, value))
-                    .collect::<Vec<O>>()
+                    .collect::<Vec<Output>>()
             )
         }
     }
 
     pub trait MapMut<'v, T>: MutVectorType<'v, T>
+    where
+        T: 'v
     {
         fn map_mut<F>(&'v mut self, f: F) -> &'v mut Self
         where
-            F: FnMut(&'v mut T)
-        {
-            self.iter_mut()
-                .for_each(f);
-            self
-        }
+            F: Fn(&mut T);
 
         fn map_index_mut<F>(&'v mut self, f: F) -> &'v mut Self
         where
-            F: FnMut(usize)
-        {
-            self.iter_mut()
-                .enumerate()
-                .map(|(index, ..)| index)
-                .for_each(f);
-            self
-        }
+            F: FnMut(usize);
 
         fn map_enumerate_mut<F>(&'v mut self, f: F) -> &'v mut Self
         where
-            F: FnMut(usize, &'v mut T)
-        {
-            self.iter_mut()
-                .enumerate()
-                .for_each(|(index, value)| f(index, value));
-            self
-        }
+            F: FnMut(usize, &mut T);
     }
 
-    pub trait Combine<'v, L>: VectorType<'v, L>
+    pub trait Combine<'v, Lhs>: VectorType<'v, Lhs>
+    where
+        Lhs: 'v
     {
-        fn combine<F, R, O, I>(&'v self, other: &dyn VectorType<'v, R, Iter = I>, f: F) -> crate::vectors::Vector<O>
+        #[allow(clippy::while_let_on_iterator)]
+        fn combine<F, Rhs, Output, Iter>(&'v self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> crate::vectors::Vector<Output>
         where
-            F: Fn(&L, &R) -> O,
-            I: Iterator<Item = R>
+            F: Fn(&Lhs, &Rhs) -> Output,
+            Iter: Iterator<Item = &'v Rhs>,
+            Rhs: 'v
         {
             use alloc::vec::Vec;
 
@@ -181,10 +171,12 @@ mod private {
             crate::vectors::Vector::from(params)
         }
 
-        fn combine_enumerate<F, R, O, I>(&'v self, other: &dyn VectorType<'v, R, Iter = I>, f: F) -> crate::vectors::Vector<O>
+        #[allow(clippy::while_let_on_iterator)]
+        fn combine_enumerate<F, Rhs, Output, Iter>(&'v self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> crate::vectors::Vector<Output>
         where
-            F: Fn(usize, &L, &R) -> O,
-            I: Iterator<Item = R>
+            F: Fn(usize, &Lhs, &Rhs) -> Output,
+            Iter: Iterator<Item = &'v Rhs>,
+            Rhs: 'v
         {
             use alloc::vec::Vec;
 
@@ -200,6 +192,24 @@ mod private {
             }
             crate::vectors::Vector::from(params)
         }
+    }
+
+
+    pub trait CombineMut<'v, Lhs>: MutVectorType<'v, Lhs>
+    where
+        Lhs: 'v
+    {
+        fn combine_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+        where
+            F: Fn(&mut Lhs, &Rhs),
+            Iter: Iterator<Item = &'v Rhs>,
+            Rhs: 'v;
+
+        fn combine_enumerate_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+        where
+            F: Fn(usize, &mut Lhs, &Rhs),
+            Iter: Iterator<Item = &'v Rhs>,
+            Rhs: 'v;
     }
 }
 
@@ -238,7 +248,7 @@ cfg_if! {
                 self.values.iter()
             }
     
-            fn len(&'v self) -> usize {
+            fn len(&self) -> usize {
                 self.values.len()
             }
         }
@@ -319,7 +329,7 @@ cfg_if! {
                 self.values.iter()
             }
     
-            fn len(&'v self) -> usize {
+            fn len(&self) -> usize {
                 self.values.len()
             }
         }
@@ -355,7 +365,7 @@ cfg_if! {
                 self.values.iter()
             }
     
-            fn len(&'v self) -> usize {
+            fn len(&self) -> usize {
                 self.values.len()
             }
         }
@@ -387,7 +397,7 @@ cfg_if! {
                 self.values.iter()
             }
     
-            fn len(&'v self) -> usize {
+            fn len(&self) -> usize {
                 self.values.len()
             }
         }
