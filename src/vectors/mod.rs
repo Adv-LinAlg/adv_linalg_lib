@@ -95,7 +95,7 @@ mod private {
 
             crate::vectors::Vector::from(
                 self.iter()
-                    .map(|value| f(value))
+                    .map(f)
                     .collect::<Vec<Output>>()
             )
         }
@@ -139,11 +139,11 @@ mod private {
 
         fn map_index_mut<F>(&'v mut self, f: F) -> &'v mut Self
         where
-            F: FnMut(usize);
+            F: Fn(usize) -> T;
 
         fn map_enumerate_mut<F>(&'v mut self, f: F) -> &'v mut Self
         where
-            F: FnMut(usize, &mut T);
+            F: Fn(usize, &mut T);
     }
 
     pub trait Combine<'v, Lhs>: VectorType<'v, Lhs>
@@ -252,6 +252,8 @@ cfg_if! {
                 self.values.len()
             }
         }
+        impl<'v, T: 'v> private::Map<'v, T> for Vector<T> {}
+        impl<'v, Lhs: 'v> private::Combine<'v, Lhs> for Vector<Lhs> {}
 
         /// This vector type allows interior mutability.
         /// 
@@ -333,6 +335,75 @@ cfg_if! {
                 self.values.len()
             }
         }
+        impl<'v, T> private::MutVectorType<'v, T> for MutVector<T>
+        where
+            T: 'v
+        {
+            type IterMut = core::slice::IterMut<'v, T>;
+
+            fn iter_mut(&'v mut self) -> Self::IterMut {
+                self.values.iter_mut()
+            }
+        }
+        impl<'v, T: 'v> private::Map<'v, T> for MutVector<T> {}
+        impl<'v, T: 'v> private::MapMut<'v, T> for MutVector<T> {
+            fn map_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(&mut T)
+            {
+                self.values.iter_mut().for_each(f);
+
+                self
+            }
+
+            fn map_index_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(usize) -> T
+            {
+                for index in 0..self.len() {
+                    self.values[index] = f(index)
+                }
+
+                self
+            }
+
+            fn map_enumerate_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(usize, &mut T)
+            {
+                for (index, value) in self.values.iter_mut().enumerate() {
+                    f(index, value)
+                }
+
+                self
+            }
+        }
+        impl<'v, Lhs: 'v> private::Combine<'v, Lhs> for MutVector<Lhs> {}
+        impl<'v, Lhs: 'v> private::CombineMut<'v, Lhs> for MutVector<Lhs> {
+            fn combine_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn private::VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+            where
+                F: Fn(&mut Lhs, &Rhs),
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                for (lhs_val, rhs_val) in self.values.iter_mut().zip(other.iter()) {
+                    f(lhs_val, rhs_val)
+                }
+                self
+            }
+
+            fn combine_enumerate_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn private::VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+            where
+                F: Fn(usize, &mut Lhs, &Rhs),
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                for (index, (lhs_val, rhs_val)) in self.values.iter_mut().zip(other.iter()).enumerate() {
+                    f(index, lhs_val, rhs_val)
+                }
+                self
+            }
+        }
     }
 }
 
@@ -369,6 +440,8 @@ cfg_if! {
                 self.values.len()
             }
         }
+        impl<'v, T: 'v> private::Map<'v, T> for VectorSlice<'v, T> {}
+        impl<'v, Lhs: 'v> private::Combine<'v, Lhs> for VectorSlice<'v, Lhs> {}
 
         /// A mutable slice-range of a [`MutVector<T>`](crate::vectors::Vector).
         /// 
@@ -401,6 +474,73 @@ cfg_if! {
                 self.values.len()
             }
         }
+        impl<'v, T> private::MutVectorType<'v, T> for MutVectorSlice<'v, T> {
+            type IterMut = core::slice::IterMut<'v, T>;
+
+            fn iter_mut(&'v mut self) -> Self::IterMut {
+                self.values.iter_mut()
+            }
+        }
+        impl<'v, T: 'v> private::Map<'v, T> for MutVectorSlice<'v, T> {}
+        impl<'v, T: 'v> private::MapMut<'v, T> for MutVectorSlice<'v, T> {
+            fn map_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(&mut T)
+            {
+                self.values.iter_mut().for_each(f);
+
+                self
+            }
+
+            fn map_index_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(usize) -> T
+            {
+                for index in 0..self.len() {
+                    self.values[index] = f(index)
+                }
+
+                self
+            }
+
+            fn map_enumerate_mut<F>(&'v mut self, f: F) -> &'v mut Self
+            where
+                F: Fn(usize, &mut T)
+            {
+                for (index, value) in self.values.iter_mut().enumerate() {
+                    f(index, value)
+                }
+
+                self
+            }
+        }
+        impl<'v, Lhs: 'v> private::Combine<'v, Lhs> for MutVectorSlice<'v, Lhs> {}
+        impl<'v, Lhs: 'v> private::CombineMut<'v, Lhs> for MutVectorSlice<'v, Lhs> {
+            fn combine_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn private::VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+            where
+                F: Fn(&mut Lhs, &Rhs),
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                for (lhs_val, rhs_val) in self.values.iter_mut().zip(other.iter()) {
+                    f(lhs_val, rhs_val)
+                }
+                self
+            }
+
+            fn combine_enumerate_mut<F, Rhs, Iter>(&'v mut self, other: &'v dyn private::VectorType<'v, Rhs, Iter = Iter>, f: F) -> &'v mut Self
+            where
+                F: Fn(usize, &mut Lhs, &Rhs),
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                for (index, (lhs_val, rhs_val)) in self.values.iter_mut().zip(other.iter()).enumerate() {
+                    f(index, lhs_val, rhs_val)
+                }
+                self
+            }
+        }
+
     } else if #[cfg(feature = "no_std")] {
         /// The basic vector type in `#![no_std]` mode.
         /// 
