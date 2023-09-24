@@ -1,81 +1,74 @@
-mod no_std {
-    #![cfg(feature = "no_std")]
+use core::ops::Index;
 
-    use core::ops::{Range, Index};
-    use crate::vectors::VectorSlice;
+use cfg_if::cfg_if;
 
-    impl<'v, T> VectorSlice<'v, T> {
-        pub fn len(&self) -> usize {
-            self.values.len()
-        }
+/*
+use core::ops::Index;
 
-        pub fn as_slice(&'v self, range: Range<usize>) -> VectorSlice<'v, T> {
-            VectorSlice {
-                values: self.values
-                            .split_at(range.start).1
-                            .split_at(range.len()).0
+use cfg_if::cfg_if;
+
+// dependent implementations
+*/
+
+cfg_if!{
+    if #[cfg(feature = "full")] {
+        use crate::vectors::{Vector, VectorSlice, private::{Map, VectorType, Combine}};
+    
+        impl<'v, T> VectorSlice<'v, T> {
+            pub fn len(&self) -> usize {
+                <Self as VectorType<T>>::len(&self)
+            }
+
+            pub fn map<F, Output>(&'v self, f: F) -> Vector<Output>
+            where
+                F: Fn(&T) -> Output
+            {
+                <Self as Map<T>>::map(&self, f)
+            }
+    
+            pub fn map_index<F, Output>(&'v self, f: F) -> Vector<Output>
+            where
+                F: Fn(usize) -> Output
+            {
+                <Self as Map<T>>::map_index(&self, f)
+            }
+    
+            pub fn map_enumerate<F, Output>(&'v self, f: F) -> Vector<Output>
+            where
+                F: Fn(usize, &T) -> Output
+            {
+                <Self as Map<T>>::map_enumerate(&self, f)
+            }
+    
+            pub fn combine<F, Rhs, Output, Iter>(&'v self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> crate::vectors::Vector<Output>
+            where
+                F: Fn(&T, &Rhs) -> Output,
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                <Self as Combine<T>>::combine(&self, other, f)
+            }
+    
+            pub fn combine_enumerate<F, Rhs, Output, Iter>(&'v self, other: &'v dyn VectorType<'v, Rhs, Iter = Iter>, f: F) -> crate::vectors::Vector<Output>
+            where
+                F: Fn(usize, &T, &Rhs) -> Output,
+                Iter: Iterator<Item = &'v Rhs>,
+                Rhs: 'v
+            {
+                <Self as Combine<T>>::combine_enumerate(&self, other, f)
             }
         }
-    }
-    impl<'v, T, U> From<U> for VectorSlice<'v, T>
-    where
-        U: Into<&'v [T]>
-    {
-        fn from(values: U) -> Self {
-            VectorSlice { values: values.into() }
-        }
-    }
-    impl<'v, T> Index<usize> for VectorSlice<'v, T>
-    where
-        T: Clone {
-        type Output = T;
 
-        fn index(&self, index: usize) -> &Self::Output {
-            &self.values[index]
-        }
-    }
+    } else if #[cfg(feature = "no_std")] {}
 }
 
-mod full {
-    #![cfg(feature = "full")]
+impl<'v, T> Index<usize> for VectorSlice<'v, T>
+where
+    T: Clone,
+{
+    type Output = T;
 
-    use alloc::vec::Vec;
-    use crate::vectors::{Vector, VectorSlice};
-
-    impl<'v, T> VectorSlice<'v, T> {
-        pub fn lambda<F>(&self, f: F) -> Vector<T>
-        where
-            F: Fn(&T) -> T {
-            Vector::from(
-                self.values
-                    .iter()
-                    .map(|value| f(value))
-                    .collect::<Vec<T>>()
-            )
-        }
-
-        pub fn lambda_index<F>(&self, f: F) -> Vector<T>
-        where
-            F: Fn(usize) -> T {
-            Vector::from(
-                self.values
-                    .iter()
-                    .enumerate()
-                    .map(|(index, _)| f(index))
-                    .collect::<Vec<T>>()
-            )
-        }
-
-        pub fn lambda_enumerate<F>(&self, f: F) -> Vector<T>
-        where
-            F: Fn(usize, &T) -> T {
-                Vector::from(
-                    self.values
-                        .iter()
-                        .enumerate()
-                        .map(|(index, value)| f(index, value))
-                        .collect::<Vec<T>>()
-                )
-        }
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.values[index]
     }
 }
